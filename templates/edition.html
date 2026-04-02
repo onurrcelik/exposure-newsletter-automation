@@ -114,6 +114,19 @@
         <p class="text-xs text-zinc-600">{{ (meta.files.whatsapp.size_bytes / 1024) | round(1) }} KB · {{ meta.files.whatsapp.uploaded_at[:10] }}</p>
       </div>
     </div>
+    {% if meta.files.whatsapp.filter_stats %}
+    {% set s = meta.files.whatsapp.filter_stats %}
+    <div class="bg-violet-950/40 border border-violet-900/40 rounded-lg px-3.5 py-2.5">
+      <p class="text-xs font-semibold text-violet-300 mb-1">Filtered for LLM</p>
+      <p class="text-xs text-zinc-400">
+        <span class="text-zinc-200 font-medium">{{ s.kept_messages }}</span> of {{ s.total_messages }} messages kept
+        <span class="text-zinc-600 mx-1">·</span>
+        {{ s.dropped_messages }} dropped outside date range
+      </p>
+    </div>
+    {% elif meta.files.whatsapp.filter_error %}
+    <p class="text-xs text-amber-500">Filter warning: {{ meta.files.whatsapp.filter_error }}</p>
+    {% endif %}
     {% endif %}
 
     <form method="post" action="/upload/{{ edition_id }}/whatsapp" enctype="multipart/form-data" class="mt-auto">

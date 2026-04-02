@@ -7,6 +7,7 @@ import shutil
 from pathlib import Path
 
 from firebase_client import editions_col
+from whatsapp_parser import filter_by_date_range
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -133,6 +134,21 @@ async def upload_whatsapp(edition_id: str, file: UploadFile = File(...)):
         "uploaded_at": datetime.now().isoformat(),
         "size_bytes": dest.stat().st_size,
     }
+
+    # Filter chat to the edition's date range and save as whatsapp_filtered.txt
+    try:
+        from datetime import date as date_type
+        d_from = date_type.fromisoformat(edition["date_from"])
+        d_to   = date_type.fromisoformat(edition["date_to"])
+        filtered_text, stats = filter_by_date_range(dest, d_from, d_to)
+        filtered_path = edition_dir / "whatsapp_filtered.txt"
+        filtered_path.write_text(filtered_text, encoding="utf-8")
+        edition["files"]["whatsapp"]["filter_stats"] = stats
+        edition["files"]["whatsapp"]["filtered_saved_as"] = "whatsapp_filtered.txt"
+    except Exception as e:
+        # Non-fatal — raw file is still there
+        edition["files"]["whatsapp"]["filter_error"] = str(e)
+
     edition["status"] = "uploaded" if "transcript" in edition["files"] else "partial"
     save_edition(edition_id, edition)
 
