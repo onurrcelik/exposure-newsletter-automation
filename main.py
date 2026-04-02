@@ -163,13 +163,15 @@ async def upload_whatsapp(edition_id: str, file: UploadFile = File(...)):
 @app.post("/edition/{edition_id}/extract")
 async def extract_edition(edition_id: str):
     edition = get_edition(edition_id)
+    edition_dir = UPLOADS_DIR / edition_id
+    date_from = edition["date_from"]
+    date_to = edition["date_to"]
     try:
-        extracted = llm.extract(
-            edition_id,
-            edition["date_from"],
-            edition["date_to"],
-            UPLOADS_DIR,
-        )
+        extracted = {}
+        if edition.get("files", {}).get("whatsapp"):
+            extracted["whatsapp"] = llm.extract_whatsapp(edition_dir, date_from, date_to)
+        if edition.get("files", {}).get("transcript"):
+            extracted["transcript"] = llm.extract_transcript(edition_dir, date_from, date_to)
         edition["extracted"] = extracted
         edition["status"] = "extracted"
         save_edition(edition_id, edition)
