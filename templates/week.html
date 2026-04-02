@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Week of {{ week_date }} — Exposure Newsletter{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="/" class="back-link">← All weeks</a>
+  <h1>Week of {{ week_date }}</h1>
+  <span class="status-pill status-{{ meta.status }}">{{ meta.status }}</span>
+</div>
+
+<div class="upload-grid">
+
+  <!-- Transcript Upload -->
+  <div class="upload-card {% if meta.files.transcript %}upload-card--done{% endif %}">
+    <div class="upload-card-header">
+      <div class="upload-icon">📝</div>
+      <div>
+        <h2>Fathom Transcript</h2>
+        <p class="upload-hint">Export the meeting transcript from Fathom and upload it here (.txt or .md)</p>
+      </div>
+    </div>
+
+    {% if meta.files.transcript %}
+    <div class="file-info">
+      <span class="file-name">{{ meta.files.transcript.original_name }}</span>
+      <span class="file-meta">{{ (meta.files.transcript.size_bytes / 1024) | round(1) }} KB · uploaded {{ meta.files.transcript.uploaded_at[:10] }}</span>
+    </div>
+    {% endif %}
+
+    <form method="post" action="/upload/{{ week_date }}/transcript" enctype="multipart/form-data">
+      <label class="file-label">
+        <input type="file" name="file" accept=".txt,.md,.pdf,.docx" required onchange="this.form.submit()" />
+        <span>{% if meta.files.transcript %}Replace file{% else %}Choose file{% endif %}</span>
+      </label>
+    </form>
+  </div>
+
+  <!-- WhatsApp Upload -->
+  <div class="upload-card {% if meta.files.whatsapp %}upload-card--done{% endif %}">
+    <div class="upload-card-header">
+      <div class="upload-icon">💬</div>
+      <div>
+        <h2>WhatsApp Chat Export</h2>
+        <p class="upload-hint">Export the group chat from WhatsApp (More options → Export chat → With media) and upload the ZIP file</p>
+      </div>
+    </div>
+
+    {% if meta.files.whatsapp %}
+    <div class="file-info">
+      <span class="file-name">{{ meta.files.whatsapp.original_name }}</span>
+      <span class="file-meta">{{ (meta.files.whatsapp.size_bytes / 1024) | round(1) }} KB · uploaded {{ meta.files.whatsapp.uploaded_at[:10] }}</span>
+    </div>
+    {% endif %}
+
+    <form method="post" action="/upload/{{ week_date }}/whatsapp" enctype="multipart/form-data">
+      <label class="file-label">
+        <input type="file" name="file" accept=".zip,.txt" required onchange="this.form.submit()" />
+        <span>{% if meta.files.whatsapp %}Replace file{% else %}Choose file{% endif %}</span>
+      </label>
+    </form>
+  </div>
+
+</div>
+
+<!-- Generate Newsletter -->
+<div class="generate-section">
+  {% if meta.status == 'uploaded' %}
+  <button class="btn-generate" disabled title="Newsletter generation coming soon">
+    Generate Newsletter (coming soon)
+  </button>
+  <p class="generate-hint">Both files uploaded. Newsletter generation will be available soon.</p>
+  {% else %}
+  <button class="btn-generate" disabled>
+    Generate Newsletter
+  </button>
+  <p class="generate-hint">Upload both the transcript and WhatsApp export to enable newsletter generation.</p>
+  {% endif %}
+</div>
+{% endblock %}

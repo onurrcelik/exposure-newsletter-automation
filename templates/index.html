@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Exposure Newsletter — All Weeks{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Weekly Editions</h1>
+  <form method="post" action="/week/create">
+    <input type="hidden" name="week_date" value="{{ current_week }}" />
+    <button type="submit" class="btn-primary">+ Start This Week ({{ current_week }})</button>
+  </form>
+</div>
+
+{% if weeks %}
+<div class="week-list">
+  {% for week in weeks %}
+  <a href="/week/{{ week.week }}" class="week-card status-{{ week.status }}">
+    <div class="week-date">{{ week.week }}</div>
+    <div class="week-badges">
+      <span class="badge {% if week.files.transcript %}badge-ok{% else %}badge-missing{% endif %}">
+        {% if week.files.transcript %}Transcript{% else %}No transcript{% endif %}
+      </span>
+      <span class="badge {% if week.files.whatsapp %}badge-ok{% else %}badge-missing{% endif %}">
+        {% if week.files.whatsapp %}WhatsApp{% else %}No WhatsApp{% endif %}
+      </span>
+    </div>
+    <div class="week-status">{{ week.status }}</div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <p>No weeks yet. Click "Start This Week" to create your first edition.</p>
+</div>
+{% endif %}
+{% endblock %}
