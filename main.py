@@ -174,6 +174,13 @@ async def extract_edition(edition_id: str):
             extracted["transcript"] = llm.extract_transcript(edition_dir, date_from, date_to)
         edition["extracted"] = extracted
         edition["status"] = "extracted"
+        # Append to extraction history
+        history = edition.get("extraction_history", [])
+        history.append({
+            "extracted_at": datetime.now().isoformat(),
+            "data": extracted,
+        })
+        edition["extraction_history"] = history
         save_edition(edition_id, edition)
         return JSONResponse({"ok": True, "extracted": extracted})
     except Exception as e:

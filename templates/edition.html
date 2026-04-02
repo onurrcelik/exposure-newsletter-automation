@@ -1,6 +1,152 @@
 {% extends "base.html" %}
 {% block title %}{{ meta.date_from }} → {{ meta.date_to }} — Exposure Newsletter{% endblock %}
 
+{% macro render_extraction(ex) %}
+  {% set w = ex.whatsapp if ex.whatsapp is defined else None %}
+  {% set t = ex.transcript if ex.transcript is defined else None %}
+
+  {% if not w and not t %}
+  <div class="bg-amber-950/30 border border-amber-800/40 rounded-xl px-4 py-3 text-xs text-amber-400">
+    This extraction used the old format. Re-extract to get the new structured view.
+  </div>
+  {% endif %}
+
+  {% if w %}
+  <div class="flex flex-col gap-3">
+    <div class="flex items-center gap-2">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-400"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <p class="text-xs font-bold text-emerald-400 uppercase tracking-wider">WhatsApp</p>
+    </div>
+    {% if w.summary %}
+    <div class="bg-zinc-800/50 border border-zinc-700/60 rounded-xl p-4">
+      <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Summary</p>
+      <p class="text-sm text-zinc-300 leading-relaxed">{{ w.summary }}</p>
+    </div>
+    {% endif %}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {% if w.highlights %}
+      <div class="bg-zinc-800/50 border border-zinc-700/60 rounded-xl p-4">
+        <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Highlights</p>
+        <ul class="flex flex-col gap-1.5">
+          {% for h in w.highlights %}<li class="text-sm text-zinc-300 flex gap-2 items-start"><span class="text-emerald-400 shrink-0 mt-0.5">·</span>{{ h }}</li>{% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+      {% if w.topics %}
+      <div class="bg-zinc-800/50 border border-zinc-700/60 rounded-xl p-4">
+        <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Topics</p>
+        <div class="flex flex-wrap gap-1.5">
+          {% for topic in w.topics %}<span class="text-xs px-2.5 py-1 rounded-full bg-zinc-700 text-zinc-300 border border-zinc-600">{{ topic }}</span>{% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    {% if w.notable_quotes %}
+    <div class="bg-zinc-800/50 border border-zinc-700/60 rounded-xl p-4">
+      <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Notable Quotes</p>
+      <div class="flex flex-col gap-3">
+        {% for q in w.notable_quotes %}
+        <blockquote class="border-l-2 border-emerald-700 pl-3">
+          <p class="text-sm text-zinc-300 italic">"{{ q.text }}"</p>
+          {% if q.author %}<p class="text-xs text-zinc-600 mt-1">— {{ q.author }}</p>{% endif %}
+        </blockquote>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% if w.shared_links %}
+    <div class="bg-zinc-800/50 border border-zinc-700/60 rounded-xl p-4">
+      <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Shared Links</p>
+      <div class="flex flex-col gap-4">
+        {% for link in w.shared_links %}
+        <div class="flex items-start gap-3">
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-md mt-0.5 shrink-0
+            {% if link.type == 'repo' %}bg-zinc-700 text-zinc-300 border border-zinc-600
+            {% elif link.type == 'paper' %}bg-violet-950 text-violet-300 border border-violet-800
+            {% elif link.type == 'article' %}bg-blue-950 text-blue-300 border border-blue-800
+            {% elif link.type in ('twitter', 'linkedin', 'instagram') %}bg-sky-950 text-sky-300 border border-sky-800
+            {% elif link.type == 'youtube' %}bg-red-950 text-red-300 border border-red-800
+            {% else %}bg-zinc-700 text-zinc-400 border border-zinc-600{% endif %}
+          ">{{ link.type }}</span>
+          <div class="min-w-0">
+            <a href="{{ link.url }}" target="_blank" rel="noopener" class="text-sm font-medium text-zinc-200 hover:text-violet-400 transition-colors truncate block">{{ link.title or link.url }}</a>
+            {% if link.description %}<p class="text-xs text-zinc-300 mt-1 leading-relaxed">{{ link.description }}</p>{% endif %}
+            {% if link.notes %}<p class="text-xs text-zinc-500 mt-1 leading-relaxed border-t border-zinc-700/60 pt-1">{{ link.notes }}</p>{% endif %}
+            <p class="text-xs text-zinc-700 mt-0.5 truncate">{{ link.url }}</p>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if w and t %}<div class="border-t border-zinc-800 my-1"></div>{% endif %}
+
+  {% if t %}
+  <div class="flex flex-col gap-3">
+    <div class="flex items-center gap-2">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-violet-400"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
+      <p class="text-xs font-bold text-violet-400 uppercase tracking-wider">Meeting Notes</p>
+    </div>
+    {% if t.summary %}
+    <div class="bg-zinc-800/50 border border-zinc-700/60 rounded-xl p-4">
+      <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Summary</p>
+      <p class="text-sm text-zinc-300 leading-relaxed">{{ t.summary }}</p>
+    </div>
+    {% endif %}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {% if t.highlights %}
+      <div class="bg-zinc-800/50 border border-zinc-700/60 rounded-xl p-4">
+        <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Highlights</p>
+        <ul class="flex flex-col gap-1.5">
+          {% for h in t.highlights %}<li class="text-sm text-zinc-300 flex gap-2 items-start"><span class="text-violet-400 shrink-0 mt-0.5">·</span>{{ h }}</li>{% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+      {% if t.topics %}
+      <div class="bg-zinc-800/50 border border-zinc-700/60 rounded-xl p-4">
+        <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Topics</p>
+        <div class="flex flex-wrap gap-1.5">
+          {% for topic in t.topics %}<span class="text-xs px-2.5 py-1 rounded-full bg-zinc-700 text-zinc-300 border border-zinc-600">{{ topic }}</span>{% endfor %}
+        </div>
+      </div>
+      {% endif %}
+      {% if t.decisions %}
+      <div class="bg-zinc-800/50 border border-zinc-700/60 rounded-xl p-4">
+        <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Decisions</p>
+        <ul class="flex flex-col gap-1.5">
+          {% for d in t.decisions %}<li class="text-sm text-zinc-300 flex gap-2 items-start"><span class="text-emerald-400 shrink-0 mt-0.5">·</span>{{ d }}</li>{% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+      {% if t.action_items %}
+      <div class="bg-zinc-800/50 border border-zinc-700/60 rounded-xl p-4">
+        <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Action Items</p>
+        <ul class="flex flex-col gap-1.5">
+          {% for a in t.action_items %}<li class="text-sm text-zinc-300 flex gap-2 items-start"><span class="text-amber-400 shrink-0 mt-0.5">·</span>{{ a }}</li>{% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+    </div>
+    {% if t.notable_quotes %}
+    <div class="bg-zinc-800/50 border border-zinc-700/60 rounded-xl p-4">
+      <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Notable Quotes</p>
+      <div class="flex flex-col gap-3">
+        {% for q in t.notable_quotes %}
+        <blockquote class="border-l-2 border-violet-700 pl-3">
+          <p class="text-sm text-zinc-300 italic">"{{ q.text }}"</p>
+          {% if q.author %}<p class="text-xs text-zinc-600 mt-1">— {{ q.author }}</p>{% endif %}
+        </blockquote>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+{% endmacro %}
+
 {% block content %}
 <!-- Header -->
 <div class="flex items-center gap-3 mb-8">
@@ -171,186 +317,48 @@
   </button>
   {% endif %}
 
-  <!-- Extraction results -->
+  <!-- Extraction results (most recent) -->
   {% if meta.extracted %}
   <div id="extraction-results" class="mt-5 flex flex-col gap-5">
-
-    <!-- Legacy flat format (old extractions) -->
-    {% if not meta.extracted.whatsapp and not meta.extracted.transcript %}
-    {% set e = meta.extracted %}
-    <div class="bg-amber-950/30 border border-amber-800/40 rounded-xl px-4 py-3 text-xs text-amber-400">
-      This extraction used the old format. Re-extract to get the new structured view.
-    </div>
-    {% if e.summary %}
-    <div class="bg-zinc-800/50 border border-zinc-700/60 rounded-xl p-4">
-      <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Summary</p>
-      <p class="text-sm text-zinc-300 leading-relaxed">{{ e.summary }}</p>
-    </div>
-    {% endif %}
-    {% if e.highlights %}
-    <div class="bg-zinc-800/50 border border-zinc-700/60 rounded-xl p-4">
-      <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Highlights</p>
-      <ul class="flex flex-col gap-1.5">{% for h in e.highlights %}<li class="text-sm text-zinc-300 flex gap-2 items-start"><span class="text-violet-400 shrink-0">·</span>{{ h }}</li>{% endfor %}</ul>
-    </div>
-    {% endif %}
-    {% endif %}
-    <!-- End legacy -->
-
-    <!-- WhatsApp Section -->
-    {% if meta.extracted.whatsapp %}
-    {% set w = meta.extracted.whatsapp %}
-    <div class="flex flex-col gap-3">
-      <div class="flex items-center gap-2">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-400"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        <p class="text-xs font-bold text-emerald-400 uppercase tracking-wider">WhatsApp</p>
-      </div>
-
-      {% if w.summary %}
-      <div class="bg-zinc-800/50 border border-zinc-700/60 rounded-xl p-4">
-        <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Summary</p>
-        <p class="text-sm text-zinc-300 leading-relaxed">{{ w.summary }}</p>
-      </div>
-      {% endif %}
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {% if w.highlights %}
-        <div class="bg-zinc-800/50 border border-zinc-700/60 rounded-xl p-4">
-          <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Highlights</p>
-          <ul class="flex flex-col gap-1.5">
-            {% for h in w.highlights %}<li class="text-sm text-zinc-300 flex gap-2 items-start"><span class="text-emerald-400 shrink-0 mt-0.5">·</span>{{ h }}</li>{% endfor %}
-          </ul>
-        </div>
-        {% endif %}
-
-        {% if w.topics %}
-        <div class="bg-zinc-800/50 border border-zinc-700/60 rounded-xl p-4">
-          <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Topics</p>
-          <div class="flex flex-wrap gap-1.5">
-            {% for t in w.topics %}<span class="text-xs px-2.5 py-1 rounded-full bg-zinc-700 text-zinc-300 border border-zinc-600">{{ t }}</span>{% endfor %}
-          </div>
-        </div>
-        {% endif %}
-      </div>
-
-      {% if w.notable_quotes %}
-      <div class="bg-zinc-800/50 border border-zinc-700/60 rounded-xl p-4">
-        <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Notable Quotes</p>
-        <div class="flex flex-col gap-3">
-          {% for q in w.notable_quotes %}
-          <blockquote class="border-l-2 border-emerald-700 pl-3">
-            <p class="text-sm text-zinc-300 italic">"{{ q.text }}"</p>
-            {% if q.author %}<p class="text-xs text-zinc-600 mt-1">— {{ q.author }}</p>{% endif %}
-          </blockquote>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-
-      {% if w.shared_links %}
-      <div class="bg-zinc-800/50 border border-zinc-700/60 rounded-xl p-4">
-        <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Shared Links</p>
-        <div class="flex flex-col gap-3">
-          {% for link in w.shared_links %}
-          <div class="flex items-start gap-3">
-            <span class="text-xs font-semibold px-2 py-0.5 rounded-md mt-0.5 shrink-0
-              {% if link.type == 'repo' %}bg-zinc-700 text-zinc-300 border border-zinc-600
-              {% elif link.type == 'paper' %}bg-violet-950 text-violet-300 border border-violet-800
-              {% elif link.type == 'article' %}bg-blue-950 text-blue-300 border border-blue-800
-              {% elif link.type in ('twitter', 'linkedin', 'instagram') %}bg-sky-950 text-sky-300 border border-sky-800
-              {% elif link.type == 'youtube' %}bg-red-950 text-red-300 border border-red-800
-              {% else %}bg-zinc-700 text-zinc-400 border border-zinc-600{% endif %}
-            ">{{ link.type }}</span>
-            <div class="min-w-0">
-              <a href="{{ link.url }}" target="_blank" rel="noopener" class="text-sm font-medium text-zinc-200 hover:text-violet-400 transition-colors truncate block">{{ link.title or link.url }}</a>
-              {% if link.notes %}<p class="text-xs text-zinc-500 mt-0.5 leading-relaxed">{{ link.notes }}</p>{% endif %}
-              <p class="text-xs text-zinc-700 mt-0.5 truncate">{{ link.url }}</p>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-    </div>
-    {% endif %}
-
-    <!-- Divider -->
-    {% if meta.extracted.whatsapp and meta.extracted.transcript %}
-    <div class="border-t border-zinc-800"></div>
-    {% endif %}
-
-    <!-- Transcript Section -->
-    {% if meta.extracted.transcript %}
-    {% set t = meta.extracted.transcript %}
-    <div class="flex flex-col gap-3">
-      <div class="flex items-center gap-2">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-violet-400"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
-        <p class="text-xs font-bold text-violet-400 uppercase tracking-wider">Meeting Notes</p>
-      </div>
-
-      {% if t.summary %}
-      <div class="bg-zinc-800/50 border border-zinc-700/60 rounded-xl p-4">
-        <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Summary</p>
-        <p class="text-sm text-zinc-300 leading-relaxed">{{ t.summary }}</p>
-      </div>
-      {% endif %}
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {% if t.highlights %}
-        <div class="bg-zinc-800/50 border border-zinc-700/60 rounded-xl p-4">
-          <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Highlights</p>
-          <ul class="flex flex-col gap-1.5">
-            {% for h in t.highlights %}<li class="text-sm text-zinc-300 flex gap-2 items-start"><span class="text-violet-400 shrink-0 mt-0.5">·</span>{{ h }}</li>{% endfor %}
-          </ul>
-        </div>
-        {% endif %}
-
-        {% if t.topics %}
-        <div class="bg-zinc-800/50 border border-zinc-700/60 rounded-xl p-4">
-          <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Topics</p>
-          <div class="flex flex-wrap gap-1.5">
-            {% for topic in t.topics %}<span class="text-xs px-2.5 py-1 rounded-full bg-zinc-700 text-zinc-300 border border-zinc-600">{{ topic }}</span>{% endfor %}
-          </div>
-        </div>
-        {% endif %}
-
-        {% if t.decisions %}
-        <div class="bg-zinc-800/50 border border-zinc-700/60 rounded-xl p-4">
-          <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Decisions</p>
-          <ul class="flex flex-col gap-1.5">
-            {% for d in t.decisions %}<li class="text-sm text-zinc-300 flex gap-2 items-start"><span class="text-emerald-400 shrink-0 mt-0.5">·</span>{{ d }}</li>{% endfor %}
-          </ul>
-        </div>
-        {% endif %}
-
-        {% if t.action_items %}
-        <div class="bg-zinc-800/50 border border-zinc-700/60 rounded-xl p-4">
-          <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Action Items</p>
-          <ul class="flex flex-col gap-1.5">
-            {% for a in t.action_items %}<li class="text-sm text-zinc-300 flex gap-2 items-start"><span class="text-amber-400 shrink-0 mt-0.5">·</span>{{ a }}</li>{% endfor %}
-          </ul>
-        </div>
-        {% endif %}
-      </div>
-
-      {% if t.notable_quotes %}
-      <div class="bg-zinc-800/50 border border-zinc-700/60 rounded-xl p-4">
-        <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Notable Quotes</p>
-        <div class="flex flex-col gap-3">
-          {% for q in t.notable_quotes %}
-          <blockquote class="border-l-2 border-violet-700 pl-3">
-            <p class="text-sm text-zinc-300 italic">"{{ q.text }}"</p>
-            {% if q.author %}<p class="text-xs text-zinc-600 mt-1">— {{ q.author }}</p>{% endif %}
-          </blockquote>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-    </div>
-    {% endif %}
-
+    {{ render_extraction(meta.extracted) }}
   </div>
   {% endif %}
 </div>
+
+<!-- ── Extraction History ──────────────────────────────────────── -->
+{% if meta.extraction_history and meta.extraction_history | length > 1 %}
+<div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 mb-4">
+  <div class="flex items-center gap-3 mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-zinc-500"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <p class="font-semibold text-zinc-100 text-sm">Extraction History</p>
+    <span class="text-xs text-zinc-600 font-medium">{{ meta.extraction_history | length }} runs</span>
+  </div>
+  <div class="flex flex-col gap-2">
+    {% for entry in meta.extraction_history | reverse %}
+    {% if not loop.first %}
+    <details class="group bg-zinc-800/40 border border-zinc-700/60 rounded-xl overflow-hidden">
+      <summary class="flex items-center gap-3 px-4 py-3 cursor-pointer list-none hover:bg-zinc-800/60 transition-colors select-none">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-zinc-500 group-open:rotate-90 transition-transform shrink-0"><path d="m9 18 6-6-6-6"/></svg>
+        <span class="text-xs font-medium text-zinc-400">{{ entry.extracted_at[:10] }}</span>
+        <span class="text-xs text-zinc-600">{{ entry.extracted_at[11:16] }}</span>
+        <div class="flex items-center gap-1.5 ml-auto">
+          {% if entry.data.whatsapp %}
+          <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-900">WhatsApp</span>
+          {% endif %}
+          {% if entry.data.transcript %}
+          <span class="text-xs px-2 py-0.5 rounded-full bg-violet-950 text-violet-400 border border-violet-900">Transcript</span>
+          {% endif %}
+        </div>
+      </summary>
+      <div class="px-4 pb-4 pt-2 flex flex-col gap-4 border-t border-zinc-700/40">
+        {{ render_extraction(entry.data) }}
+      </div>
+    </details>
+    {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
 
 <!-- ── Step 2: Generate Draft ──────────────────────────────────── -->
 <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
