@@ -2,7 +2,7 @@ from fastapi import FastAPI, UploadFile, File, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from datetime import date, timedelta
+from datetime import datetime
 import os, json, shutil
 from pathlib import Path
 
@@ -14,85 +14,92 @@ UPLOADS_DIR = Path("uploads")
 UPLOADS_DIR.mkdir(exist_ok=True)
 
 
-def current_week_monday() -> str:
-    today = date.today()
-    monday = today - timedelta(days=today.weekday())
-    return monday.isoformat()
-
-
-def get_week_meta(week_date: str) -> dict:
-    meta_path = UPLOADS_DIR / week_date / "meta.json"
+def get_edition_meta(edition_id: str) -> dict:
+    meta_path = UPLOADS_DIR / edition_id / "meta.json"
     if meta_path.exists():
-        return json.loads(meta_path.read_text())
+        data = json.loads(meta_path.read_text())
+        # Migrate old format that used "week" key
+        if "week" in data and "edition_id" not in data:
+            w = data["week"]
+            data["edition_id"] = w
+            data["date_from"] = w
+            data["date_to"] = w
+        return data
+    # Parse date range from folder name (new format: date_from_date_to)
+    parts = edition_id.split("_")
+    date_from = parts[0] if len(parts) >= 1 else edition_id
+    date_to = parts[1] if len(parts) >= 2 else edition_id
     return {
-        "week": week_date,
+        "edition_id": edition_id,
+        "date_from": date_from,
+        "date_to": date_to,
         "created_at": None,
         "files": {},
         "status": "empty",
     }
 
 
-def save_meta(week_date: str, meta: dict):
-    (UPLOADS_DIR / week_date).mkdir(parents=True, exist_ok=True)
-    meta_path = UPLOADS_DIR / week_date / "meta.json"
+def save_meta(edition_id: str, meta: dict):
+    (UPLOADS_DIR / edition_id).mkdir(parents=True, exist_ok=True)
+    meta_path = UPLOADS_DIR / edition_id / "meta.json"
     meta_path.write_text(json.dumps(meta, indent=2))
 
 
-def list_weeks() -> list[dict]:
-    weeks = []
+def list_editions() -> list[dict]:
+    editions = []
     for folder in sorted(UPLOADS_DIR.iterdir(), reverse=True):
         if folder.is_dir() and (folder / "meta.json").exists():
-            weeks.append(get_week_meta(folder.name))
-    return weeks
+            editions.append(get_edition_meta(folder.name))
+    return editions
 
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    weeks = list_weeks()
-    current_week = current_week_monday()
+    editions = list_editions()
     return templates.TemplateResponse("index.html", {
         "request": request,
-        "weeks": weeks,
-        "current_week": current_week,
+        "editions": editions,
     })
 
 
-@app.post("/week/create")
-async def create_week(week_date: str = Form(...)):
-    week_dir = UPLOADS_DIR / week_date
-    week_dir.mkdir(parents=True, exist_ok=True)
-    meta = get_week_meta(week_date)
+@app.post("/edition/create")
+async def create_edition(date_from: str = Form(...), date_to: str = Form(...)):
+    edition_id = f"{date_from}_{date_to}"
+    edition_dir = UPLOADS_DIR / edition_id
+    edition_dir.mkdir(parents=True, exist_ok=True)
+    meta = get_edition_meta(edition_id)
     if not meta["created_at"]:
-        from datetime import datetime
         meta["created_at"] = datetime.now().isoformat()
-        save_meta(week_date, meta)
-    return RedirectResponse(f"/week/{week_date}", status_code=303)
+        meta["edition_id"] = edition_id
+        meta["date_from"] = date_from
+        meta["date_to"] = date_to
+        save_meta(edition_id, meta)
+    return RedirectResponse(f"/edition/{edition_id}", status_code=303)
 
 
-@app.get("/week/{week_date}", response_class=HTMLResponse)
-async def week_detail(request: Request, week_date: str):
-    meta = get_week_meta(week_date)
-    return templates.TemplateResponse("week.html", {
+@app.get("/edition/{edition_id}", response_class=HTMLResponse)
+async def edition_detail(request: Request, edition_id: str):
+    meta = get_edition_meta(edition_id)
+    return templates.TemplateResponse("edition.html", {
         "request": request,
-        "week_date": week_date,
+        "edition_id": edition_id,
         "meta": meta,
     })
 
 
-@app.post("/upload/{week_date}/transcript")
-async def upload_transcript(week_date: str, file: UploadFile = File(...)):
-    from datetime import datetime
-    week_dir = UPLOADS_DIR / week_date
-    week_dir.mkdir(parents=True, exist_ok=True)
+@app.post("/upload/{edition_id}/transcript")
+async def upload_transcript(edition_id: str, file: UploadFile = File(...)):
+    edition_dir = UPLOADS_DIR / edition_id
+    edition_dir.mkdir(parents=True, exist_ok=True)
 
     suffix = Path(file.filename).suffix or ".txt"
     save_name = f"transcript{suffix}"
-    dest = week_dir / save_name
+    dest = edition_dir / save_name
 
     with dest.open("wb") as f:
         shutil.copyfileobj(file.file, f)
 
-    meta = get_week_meta(week_date)
+    meta = get_edition_meta(edition_id)
     if not meta["created_at"]:
         meta["created_at"] = datetime.now().isoformat()
     meta["files"]["transcript"] = {
@@ -102,25 +109,24 @@ async def upload_transcript(week_date: str, file: UploadFile = File(...)):
         "size_bytes": dest.stat().st_size,
     }
     meta["status"] = "uploaded" if "whatsapp" in meta["files"] else "partial"
-    save_meta(week_date, meta)
+    save_meta(edition_id, meta)
 
-    return RedirectResponse(f"/week/{week_date}", status_code=303)
+    return RedirectResponse(f"/edition/{edition_id}", status_code=303)
 
 
-@app.post("/upload/{week_date}/whatsapp")
-async def upload_whatsapp(week_date: str, file: UploadFile = File(...)):
-    from datetime import datetime
-    week_dir = UPLOADS_DIR / week_date
-    week_dir.mkdir(parents=True, exist_ok=True)
+@app.post("/upload/{edition_id}/whatsapp")
+async def upload_whatsapp(edition_id: str, file: UploadFile = File(...)):
+    edition_dir = UPLOADS_DIR / edition_id
+    edition_dir.mkdir(parents=True, exist_ok=True)
 
     suffix = Path(file.filename).suffix or ".zip"
     save_name = f"whatsapp_export{suffix}"
-    dest = week_dir / save_name
+    dest = edition_dir / save_name
 
     with dest.open("wb") as f:
         shutil.copyfileobj(file.file, f)
 
-    meta = get_week_meta(week_date)
+    meta = get_edition_meta(edition_id)
     if not meta["created_at"]:
         meta["created_at"] = datetime.now().isoformat()
     meta["files"]["whatsapp"] = {
@@ -130,11 +136,11 @@ async def upload_whatsapp(week_date: str, file: UploadFile = File(...)):
         "size_bytes": dest.stat().st_size,
     }
     meta["status"] = "uploaded" if "transcript" in meta["files"] else "partial"
-    save_meta(week_date, meta)
+    save_meta(edition_id, meta)
 
-    return RedirectResponse(f"/week/{week_date}", status_code=303)
+    return RedirectResponse(f"/edition/{edition_id}", status_code=303)
 
 
-@app.get("/api/weeks")
-async def api_weeks():
-    return list_weeks()
+@app.get("/api/editions")
+async def api_editions():
+    return list_editions()
