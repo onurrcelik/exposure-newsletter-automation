@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI, UploadFile, File, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -6,8 +9,10 @@ from datetime import datetime
 import shutil
 from pathlib import Path
 
+from fastapi.responses import JSONResponse
 from firebase_client import editions_col
 from whatsapp_parser import filter_by_date_range
+import llm
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -153,6 +158,50 @@ async def upload_whatsapp(edition_id: str, file: UploadFile = File(...)):
     save_edition(edition_id, edition)
 
     return RedirectResponse(f"/edition/{edition_id}", status_code=303)
+
+
+@app.post("/edition/{edition_id}/extract")
+async def extract_edition(edition_id: str):
+    edition = get_edition(edition_id)
+    try:
+        extracted = llm.extract(
+            edition_id,
+            edition["date_from"],
+            edition["date_to"],
+            UPLOADS_DIR,
+        )
+        edition["extracted"] = extracted
+        edition["status"] = "extracted"
+        save_edition(edition_id, edition)
+        return JSONResponse({"ok": True, "extracted": extracted})
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
+@app.post("/edition/{edition_id}/generate")
+async def generate_edition(edition_id: str):
+    edition = get_edition(edition_id)
+    if not edition.get("extracted"):
+        return JSONResponse({"ok": False, "error": "Run extraction first."}, status_code=400)
+    try:
+        draft = llm.generate_draft(
+            edition["extracted"],
+            edition["date_from"],
+            edition["date_to"],
+        )
+        edition["draft"] = draft
+        save_edition(edition_id, edition)
+        return JSONResponse({"ok": True, "draft": draft})
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
+@app.post("/edition/{edition_id}/save-draft")
+async def save_draft(edition_id: str, draft: str = Form(...)):
+    edition = get_edition(edition_id)
+    edition["draft"] = draft
+    save_edition(edition_id, edition)
+    return JSONResponse({"ok": True})
 
 
 @app.post("/edition/{edition_id}/delete")
