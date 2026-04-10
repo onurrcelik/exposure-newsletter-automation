@@ -18,6 +18,17 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+
+def _fmt_date(value: str) -> str:
+    """Convert yyyy-mm-dd to dd.mm.yyyy"""
+    try:
+        y, m, d = value.split("-")
+        return f"{d}.{m}.{y}"
+    except Exception:
+        return value
+
+templates.env.filters["fmt_date"] = _fmt_date
+
 UPLOADS_DIR = Path("uploads")
 UPLOADS_DIR.mkdir(exist_ok=True)
 
@@ -91,32 +102,6 @@ async def edition_detail(request: Request, edition_id: str):
     })
 
 
-@app.post("/upload/{edition_id}/transcript")
-async def upload_transcript(edition_id: str, file: UploadFile = File(...)):
-    edition_dir = UPLOADS_DIR / edition_id
-    edition_dir.mkdir(parents=True, exist_ok=True)
-
-    suffix = Path(file.filename).suffix or ".txt"
-    save_name = f"transcript{suffix}"
-    dest = edition_dir / save_name
-    with dest.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
-
-    edition = get_edition(edition_id)
-    if not edition["created_at"]:
-        edition["created_at"] = datetime.now().isoformat()
-    edition.setdefault("files", {})
-    edition["files"]["transcript"] = {
-        "original_name": file.filename,
-        "saved_as": save_name,
-        "uploaded_at": datetime.now().isoformat(),
-        "size_bytes": dest.stat().st_size,
-    }
-    edition["status"] = "uploaded" if "whatsapp" in edition["files"] else "partial"
-    save_edition(edition_id, edition)
-
-    return RedirectResponse(f"/edition/{edition_id}", status_code=303)
-
 
 @app.post("/upload/{edition_id}/whatsapp")
 async def upload_whatsapp(edition_id: str, file: UploadFile = File(...)):
@@ -154,7 +139,7 @@ async def upload_whatsapp(edition_id: str, file: UploadFile = File(...)):
         # Non-fatal — raw file is still there
         edition["files"]["whatsapp"]["filter_error"] = str(e)
 
-    edition["status"] = "uploaded" if "transcript" in edition["files"] else "partial"
+    edition["status"] = "uploaded"
     save_edition(edition_id, edition)
 
     return RedirectResponse(f"/edition/{edition_id}", status_code=303)
@@ -168,10 +153,7 @@ async def extract_edition(edition_id: str):
     date_to = edition["date_to"]
     try:
         extracted = {}
-        if edition.get("files", {}).get("whatsapp"):
-            extracted["whatsapp"] = llm.extract_whatsapp(edition_dir, date_from, date_to)
-        if edition.get("files", {}).get("transcript"):
-            extracted["transcript"] = llm.extract_transcript(edition_dir, date_from, date_to)
+        extracted["whatsapp"] = llm.extract_whatsapp(edition_dir, date_from, date_to)
         edition["extracted"] = extracted
         edition["status"] = "extracted"
         # Append to extraction history
@@ -186,31 +168,6 @@ async def extract_edition(edition_id: str):
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
-
-@app.post("/edition/{edition_id}/generate")
-async def generate_edition(edition_id: str):
-    edition = get_edition(edition_id)
-    if not edition.get("extracted"):
-        return JSONResponse({"ok": False, "error": "Run extraction first."}, status_code=400)
-    try:
-        draft = llm.generate_draft(
-            edition["extracted"],
-            edition["date_from"],
-            edition["date_to"],
-        )
-        edition["draft"] = draft
-        save_edition(edition_id, edition)
-        return JSONResponse({"ok": True, "draft": draft})
-    except Exception as e:
-        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
-
-
-@app.post("/edition/{edition_id}/save-draft")
-async def save_draft(edition_id: str, draft: str = Form(...)):
-    edition = get_edition(edition_id)
-    edition["draft"] = draft
-    save_edition(edition_id, edition)
-    return JSONResponse({"ok": True})
 
 
 @app.post("/edition/{edition_id}/delete")

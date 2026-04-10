@@ -169,9 +169,9 @@
       <span>Edition period</span>
     </div>
     <h1 class="text-2xl font-bold tracking-tight text-zinc-50 flex items-center gap-3">
-      {{ meta.date_from }}
+      {{ meta.date_from | fmt_date }}
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-zinc-600"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-      {{ meta.date_to }}
+      {{ meta.date_to | fmt_date }}
     </h1>
   </div>
 
@@ -190,48 +190,8 @@
   {% endif %}
 </div>
 
-<!-- Upload Grid -->
-<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-
-  <!-- Transcript Card -->
-  <div class="bg-zinc-900 border {% if meta.files.transcript %}border-emerald-900/60{% else %}border-zinc-800{% endif %} rounded-2xl p-5 flex flex-col gap-4 transition-colors">
-    <div class="flex items-start gap-3">
-      <div class="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-violet-400"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>
-      </div>
-      <div class="min-w-0">
-        <h2 class="font-semibold text-zinc-100 text-sm">Fathom Transcript</h2>
-        <p class="text-xs text-zinc-500 mt-0.5 leading-relaxed">Export the meeting transcript from Fathom (.txt, .md, .pdf, or .docx)</p>
-      </div>
-      {% if meta.files.transcript %}
-      <div class="shrink-0 ml-auto">
-        <span class="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="text-white"><polyline points="20 6 9 17 4 12"/></svg>
-        </span>
-      </div>
-      {% endif %}
-    </div>
-
-    {% if meta.files.transcript %}
-    <div class="bg-zinc-800/60 border border-zinc-700 rounded-lg px-3.5 py-2.5 flex items-center gap-2.5">
-      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-zinc-400 shrink-0"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-      <div class="min-w-0">
-        <p class="text-xs font-medium text-zinc-300 truncate">{{ meta.files.transcript.original_name }}</p>
-        <p class="text-xs text-zinc-600">{{ (meta.files.transcript.size_bytes / 1024) | round(1) }} KB · {{ meta.files.transcript.uploaded_at[:10] }}</p>
-      </div>
-    </div>
-    {% endif %}
-
-    <form method="post" action="/upload/{{ edition_id }}/transcript" enctype="multipart/form-data" class="mt-auto">
-      <label class="upload-zone flex items-center justify-center gap-2 border border-dashed border-zinc-700 hover:border-violet-500 hover:bg-violet-500/5 rounded-xl px-4 py-3 cursor-pointer transition-all duration-150 group">
-        <input type="file" name="file" accept=".txt,.md,.pdf,.docx" required onchange="this.form.submit()" />
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-zinc-500 group-hover:text-violet-400 transition-colors"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-        <span class="text-sm font-medium text-zinc-500 group-hover:text-violet-400 transition-colors">
-          {% if meta.files.transcript %}Replace file{% else %}Upload transcript{% endif %}
-        </span>
-      </label>
-    </form>
-  </div>
+<!-- Upload -->
+<div class="mb-6">
 
   <!-- WhatsApp Card -->
   <div class="bg-zinc-900 border {% if meta.files.whatsapp %}border-emerald-900/60{% else %}border-zinc-800{% endif %} rounded-2xl p-5 flex flex-col gap-4 transition-colors">
@@ -295,7 +255,7 @@
       <div class="w-8 h-8 rounded-lg bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-xs font-bold text-violet-400">1</div>
       <div>
         <p class="font-semibold text-zinc-100 text-sm">Extract with AI</p>
-        <p class="text-xs text-zinc-500">MiniMax reads both files and pulls out the key content</p>
+        <p class="text-xs text-zinc-500">MiniMax reads the WhatsApp export and pulls out the key content</p>
       </div>
     </div>
     {% if meta.extracted %}
@@ -313,7 +273,7 @@
   </button>
   {% else %}
   <button disabled class="inline-flex items-center gap-2 bg-zinc-800 cursor-not-allowed text-zinc-600 text-sm font-semibold px-4 py-2 rounded-lg border border-zinc-700">
-    Upload both files first
+    Upload WhatsApp export first
   </button>
   {% endif %}
 
@@ -345,9 +305,6 @@
           {% if entry.data.whatsapp %}
           <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-900">WhatsApp</span>
           {% endif %}
-          {% if entry.data.transcript %}
-          <span class="text-xs px-2 py-0.5 rounded-full bg-violet-950 text-violet-400 border border-violet-900">Transcript</span>
-          {% endif %}
         </div>
       </summary>
       <div class="px-4 pb-4 pt-2 flex flex-col gap-4 border-t border-zinc-700/40">
@@ -359,51 +316,6 @@
   </div>
 </div>
 {% endif %}
-
-<!-- ── Step 2: Generate Draft ──────────────────────────────────── -->
-<div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-  <div class="flex items-center justify-between mb-4">
-    <div class="flex items-center gap-3">
-      <div class="w-8 h-8 rounded-lg bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-xs font-bold text-violet-400">2</div>
-      <div>
-        <p class="font-semibold text-zinc-100 text-sm">Generate Draft</p>
-        <p class="text-xs text-zinc-500">Turn the extracted content into a newsletter draft</p>
-      </div>
-    </div>
-    {% if meta.draft %}
-    <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-900">
-      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Draft saved
-    </span>
-    {% endif %}
-  </div>
-
-  {% if meta.extracted %}
-  <button id="btn-generate" onclick="runGenerate()"
-    class="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
-    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-    {% if meta.draft %}Regenerate{% else %}Generate Draft{% endif %}
-  </button>
-  {% else %}
-  <button disabled class="inline-flex items-center gap-2 bg-zinc-800 cursor-not-allowed text-zinc-600 text-sm font-semibold px-4 py-2 rounded-lg border border-zinc-700">
-    Run extraction first
-  </button>
-  {% endif %}
-
-  {% if meta.draft %}
-  <div class="mt-4">
-    <p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Draft — edit freely</p>
-    <textarea id="draft-editor"
-      class="w-full bg-zinc-800/60 border border-zinc-700 rounded-xl p-4 text-sm text-zinc-200 leading-relaxed resize-y focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/30 transition-colors font-mono"
-      rows="20">{{ meta.draft }}</textarea>
-    <div class="flex items-center justify-between mt-2">
-      <p id="save-status" class="text-xs text-zinc-600"></p>
-      <button onclick="saveDraft()" class="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-zinc-700 hover:bg-zinc-600 px-4 py-2 rounded-lg transition-colors">
-        Save Draft
-      </button>
-    </div>
-  </div>
-  {% endif %}
-</div>
 
 <!-- Loading overlay -->
 <div id="loading-overlay" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center gap-4">
@@ -432,26 +344,7 @@
     } catch(e) { hideLoading(); alert('Request failed: ' + e); }
   }
 
-  async function runGenerate() {
-    showLoading('Generating newsletter draft…');
-    try {
-      const res = await fetch(`/edition/${editionId}/generate`, { method: 'POST' });
-      const data = await res.json();
-      if (data.ok) location.reload();
-      else { hideLoading(); alert('Generation failed: ' + data.error); }
-    } catch(e) { hideLoading(); alert('Request failed: ' + e); }
-  }
 
-  async function saveDraft() {
-    const draft = document.getElementById('draft-editor').value;
-    const status = document.getElementById('save-status');
-    status.textContent = 'Saving…';
-    const body = new URLSearchParams({ draft });
-    const res = await fetch(`/edition/${editionId}/save-draft`, { method: 'POST', body });
-    const data = await res.json();
-    status.textContent = data.ok ? 'Saved.' : 'Error saving.';
-    setTimeout(() => status.textContent = '', 2000);
-  }
 </script>
 
 {% endblock %}

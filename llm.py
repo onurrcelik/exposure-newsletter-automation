@@ -79,13 +79,6 @@ def _read_file(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
-def _load_transcript(edition_dir: Path) -> str:
-    for ext in (".txt", ".md"):
-        p = edition_dir / f"transcript{ext}"
-        if p.exists():
-            return _read_file(p)
-    return ""
-
 
 def _load_whatsapp(edition_dir: Path) -> str:
     filtered = edition_dir / "whatsapp_filtered.txt"
@@ -178,68 +171,3 @@ Rules for shared_links:
     return result
 
 
-def extract_transcript(edition_dir: Path, date_from: str, date_to: str) -> dict:
-    transcript = _load_transcript(edition_dir)
-
-    prompt = f"""Analyze this meeting transcript from {date_from} to {date_to} and extract structured content for a newsletter.
-
-TRANSCRIPT:
-{transcript[:12000]}
-
-Return ONLY valid JSON with this exact structure:
-{{
-  "summary": "2-3 sentence overview of the meeting — what was discussed and what was the overall outcome",
-  "highlights": [
-    "key highlight or moment from the meeting"
-  ],
-  "topics": [
-    "main topic or agenda item discussed"
-  ],
-  "decisions": [
-    "a decision that was made or an announcement"
-  ],
-  "action_items": [
-    "a task or follow-up item, include owner if mentioned"
-  ],
-  "notable_quotes": [
-    {{
-      "text": "exact quote worth including in the newsletter",
-      "author": "speaker name"
-    }}
-  ]
-}}"""
-
-    resp = _client().chat.completions.create(
-        model=_MODEL,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.3,
-    )
-    return _parse_json(resp.choices[0].message.content)
-
-
-def generate_draft(extracted: dict, date_from: str, date_to: str) -> str:
-    prompt = f"""Write a newsletter for the period {date_from} to {date_to}.
-
-You have two sources of extracted content:
-
-MEETING NOTES:
-{json.dumps(extracted.get('transcript', {}), indent=2)}
-
-WHATSAPP HIGHLIGHTS:
-{json.dumps(extracted.get('whatsapp', {}), indent=2)}
-
-Guidelines:
-- Warm, professional tone
-- Two clear sections: one for meeting notes, one for community highlights from WhatsApp
-- Include highlights, key decisions, notable quotes where relevant
-- Mention shared links naturally in the WhatsApp section
-- No markdown # headers — use natural prose section titles
-- Keep it concise and engaging
-- Return plain text only"""
-
-    resp = _client().chat.completions.create(
-        model=_MODEL,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.7,
-    )
-    return _clean(resp.choices[0].message.content)
